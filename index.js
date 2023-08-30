@@ -3,8 +3,14 @@ const request = require('request');
 const cheerio = require('cheerio');
 const express = require('express');
 const consolidate = require('consolidate')
+const bodyParser = require('body-parser');
 
 const app = express();
+const multer = require('multer');
+const forms = multer();
+app.use(bodyParser.json());
+app.use(forms.array()); 
+app.use(bodyParser.urlencoded({ extended: true }));
 app.engine('hbs', consolidate.handlebars);
 app.set('view engine', 'hbs');
 app.set('views', `${__dirname}/views`);
@@ -81,26 +87,21 @@ const atbSu = html => {
 
 app.get('/', async (req, res) => {
   let result = await getStat( 20000, 300000 );
-  
-  // console.log(result);
-  // showResults(result);
-  // console.log( showResults(result) );
-
   res.render('index', {
-    title: 'Hello, world',
     features: showResults(result),
   });
 })
 
 
-// app.post('/', (req, res) => {
-//   console.log(req.body);
-//   const thaiMonth = 20000;
-//   const rublesIsThere = 300000;
-//   console.log( getStat( thaiMonth, rublesIsThere ) );
+app.post('/', async function(req, res) {
+  console.log(req.body);
 
-//   res.send('Ok');
-// })
+  // console.log(await getStat( req.body.rubIsshetre, req.body.bathPerWeek ));
+  let result = await getStat( req.body.rubIsshetre, req.body.bathPerWeek );
+  res.render('index', {
+    features: showResults(result),
+  });
+});
 
 app.listen(8888);
 

@@ -6,8 +6,6 @@
   <title>{{title}}</title>
 </head>
 <body>
-  <h1>{{title}}</h1>
-
   {{#if error}}
     <h2>Error: {{error}}</h2>
   {{/if}}
@@ -16,6 +14,12 @@
       <li>{{this.name}}: {{this.value}}</li>
     {{/each}}    
   </ul>
+
+  <form action="/" method="post">
+    <input name="rubIsshetre" val=""/>
+    <input name="bathPerWeek" val=""/>
+    <button type="submit">Ok</button>
+  </form>
 
 </body>
 </html>
