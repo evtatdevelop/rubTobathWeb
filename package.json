@@ -1,0 +1,20 @@
+{
+  "name": "rubYoBath",
+  "version": "1.0.0",
+  "description": "This app use [node-console-colors](https://github.com/damien-otis/node-console-colors).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "consolidate": "^1.0.1",
+    "express": "^4.18.2",
+    "handlebars": "^4.7.8",
+    "node-console-colors": "^1.1.5",
+    "request": "^2.88.2"
+  }
+}
