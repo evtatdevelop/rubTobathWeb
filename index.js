@@ -4,6 +4,114 @@ const cheerio = require('cheerio');
 const express = require('express');
 const consolidate = require('consolidate')
 const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+
+const Schema = mongoose.Schema;
+mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht')
+  .then(() => {
+    console.log('Connected to rubToBaht!!!');
+    const RatesSchema = new Schema({
+      date: {
+        type: String,
+        required: true,
+      },
+      bath_usd: {
+        type: Number,
+        required: true,
+      },
+      bath_cny: {
+        type: Number,
+        required: true,
+      },
+      bath_rub: {
+        type: Number,
+        required: true,
+      },
+      cny_rub: {
+        type: Number,
+        required: true,
+      },
+      usd_rub: {
+        type: Number,
+        required: true,
+      },
+    });
+    const Rate = mongoose.model('rate', RatesSchema);
+    /* Insert
+    [
+      {
+        date: '1693543330006',
+        bath_usd: 35.06,
+        bath_cny: 4.83,
+        bath_rub: 0.37,
+        cny_rub: 13.6,
+        usd_rub: 96.7
+      },
+      {
+        date: '1693543351805',
+        bath_usd: 35.06,
+        bath_cny: 4.83,
+        bath_rub: 0.37,
+        cny_rub: 13.6,
+        usd_rub: 96.7
+      },
+      {
+        date: '1693543572085',
+        bath_usd: 35.06,
+        bath_cny: 4.83,
+        bath_rub: 0.37,
+        cny_rub: 13.6,
+        usd_rub: 96.7
+      },
+      {
+        date: '1693563610827',
+        bath_usd: 35.01,
+        bath_cny: 4.82,
+        bath_rub: 0.36,
+        cny_rub: 13.84,
+        usd_rub: 96.99
+      },
+      {
+        date: '1693563623278',
+        bath_usd: 35.01,
+        bath_cny: 4.82,
+        bath_rub: 0.36,
+        cny_rub: 13.84,
+        usd_rub: 96.99
+      },      
+    ].map(item => {
+      const { date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, } = item;
+      const rate = new Rate({
+        date,
+        bath_usd,
+        bath_cny,
+        bath_rub,
+        cny_rub,
+        usd_rub,
+      });
+      rate.save().then(rate => {
+        console.log('Document', rate);
+      }, err => {
+        console.error(err);
+      });
+    })
+    //*/
+
+   //* Select
+
+      Rate.find({}).then(rate => {
+      // Person.findOne().then(user => {
+      // Person.findOne({userName: /t/ig }).then(user => {
+        console.log('Document', rate);
+      }, err => {
+        console.error(err);
+      })
+    //*/
+
+  });
+
+
+
 
 const app = express();
 // const multer = require('multer');
@@ -12,7 +120,6 @@ const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
 app.engine('hbs', consolidate.handlebars);
 app.set('view engine', 'hbs');
 app.set('views', `${__dirname}/views`);
@@ -22,6 +129,7 @@ const {bathIsThere, thaiMonth, rublesIsThere, condoMonthRent, borderRunPrice, st
 const getStat = () => new Promise((resolve, reject) => fs.exists('./stat.json', exists => {
   if ( exists ) fs.readFile('./stat.json', async (err, data) => {
     const stat = JSON.parse(data);
+    console.log(stat);
     const lastStat = Object.entries(stat)[Object.entries(stat).length-1];
     if ( !lastStat || !lastStat[0] || Date.now() - +lastStat[0] > parseHourPeriod*3600*1000) return resolve( {...await parseRates(), lastStat: Date.now() }); // *3600*1000
     else {
