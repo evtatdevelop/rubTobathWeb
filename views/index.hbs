@@ -9,15 +9,38 @@
   {{#if error}}
     <h2>Error: {{error}}</h2>
   {{/if}}
+  <h3>Last update: {{lastStat}}</h3>
   <ul>
-    {{#each features}}
+    {{!-- {{#each features}}
       <li>{{this.name}}: {{this.value}}</li>
-    {{/each}}    
+    {{/each}}     --}}
   </ul>
+    <p>{{rubRes}}</p>
+    <p>{{usdRes}}</p>
+    <p>{{cnyRes}}</p>
+    <p>Available per week: {{weekExpss}}</p>
 
-  <form action="/" method="post">
-    <input name="rubIsshetre" val=""/>
-    <input name="bathPerWeek" val=""/>
+  <form action="/" method="post" style="display: flex; flex-direction: column; width: 350px">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+      <label for="bathPerWeek" style="display: block; width: 250px;">Baht per week for everything:</label>
+      <input id="bathPerWeek" name="bathPerWeek" value="{{thaiMonth}}"/>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+      <label for="rubIsshetre" style="display: block; width: 250px;">Rubles at the beginning :</label>
+      <input id="rubIsshetre" name="rubIsshetre" value="{{rublesIsThere}}"/>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+      <label for="borderRunPrice" style="display: block; width: 250px;">Border run price:</label>
+      <input id="borderRunPrice" name="borderRunPrice" value="{{borderRunPrice}}"/>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+      <label for="condoMonthRent" style="display: block; width: 250px;">Condo month rent:</label>
+      <input id="condoMonthRent" name="condoMonthRent" value="{{condoMonthRent}}"/>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+      <label for="stayingMonth" style="display: block; width: 250px;">Staying month:</label>
+      <input id="stayingMonth" name="stayingMonth" value="{{stayingMonth}}"/>
+    </div>
     <button type="submit">Ok</button>
   </form>
 
