@@ -6,44 +6,17 @@ const consolidate = require('consolidate')
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-
-const setMongoDate = dataLog => mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht').then(() => {
-  const RatesSchema = new Schema({
-    date: { type: String, required: true, },
-    bath_usd: { type: Number, required: true, },
-    bath_cny: { type: Number, required: true, },
-    bath_rub: { type: Number, required: true, },
-    cny_rub: { type: Number, required: true, },
-    usd_rub: { type: Number, required: true, },
-  });
-  const Rate = mongoose.model('rate', RatesSchema);
-  const { date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, } = dataLog;
-  const rate = new Rate({ date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, });
-  rate.save().then(
-    rate => console.log('Document', rate),
-    err => console.error(err)
-  );
+const RatesSchema = new Schema({
+  date: { type: String, required: true, },
+  bath_usd: { type: Number, required: true, },
+  bath_cny: { type: Number, required: true, },
+  bath_rub: { type: Number, required: true, },
+  cny_rub: { type: Number, required: true, },
+  usd_rub: { type: Number, required: true, },
 });
+const Rate =  mongoose.model('rate', RatesSchema);
 
-
-const getMongoDate = async() => mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht').then(() => {
-  const RatesSchema = new Schema({
-    date: { type: String, required: true, },
-    bath_usd: { type: Number, required: true, },
-    bath_cny: { type: Number, required: true, },
-    bath_rub: { type: Number, required: true, },
-    cny_rub: { type: Number, required: true, },
-    usd_rub: { type: Number, required: true, },
-  });
-  const Rate = mongoose.model('rate', RatesSchema);
-  Rate.find({}).then(
-    rate => console.log(
-      rate.reduce((last, log) => !Object.keys(last).length || last.date < log.date ? last = log : last = last , {})
-    ),
-    err => err
-  )
-});
-
+const {bathIsThere, rublesIsThere, condoMonthRent, borderRunPrice, stayingMonth, parseHourPeriod} = require('./config.json');
 
 const app = express();
 app.use(bodyParser.json());
@@ -52,19 +25,23 @@ app.engine('hbs', consolidate.handlebars);
 app.set('view engine', 'hbs');
 app.set('views', `${__dirname}/views`);
 
-const {bathIsThere, rublesIsThere, condoMonthRent, borderRunPrice, stayingMonth, parseHourPeriod} = require('./config.json');
-
 const getStat = () => new Promise((resolve, reject) => fs.exists('./stat.json', exists => {
   if ( exists ) fs.readFile('./stat.json', async (err, data) => {
     const stat = JSON.parse(data);
-    console.log(stat);
     const lastStat = Object.entries(stat)[Object.entries(stat).length-1];
-    if ( !lastStat || !lastStat[0] || Date.now() - +lastStat[0] > parseHourPeriod) return resolve( {...await parseRates(), lastStat: Date.now() }); // *3600*1000
-    else {
-      return resolve( {...lastStat[1], lastStat: lastStat[0]} );
-    }
+    if ( !lastStat || !lastStat[0] || Date.now() - +lastStat[0] > parseHourPeriod*3600*1000) return resolve( {...await parseRates(), date: Date.now() }); // *3600*1000
+    else return resolve( {...lastStat[1], date: lastStat[0]} );
   })
 }));
+
+const getMongo = async() => {
+  await mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht');
+  const rate = await Rate.find({});
+  const lastLog = rate.reduce((last, log) => !Object.keys(last).length || last.date < log.date ? last = log : last = last , {});
+  if ( !lastLog || !lastLog.date || Date.now() - +lastLog.date > parseHourPeriod*1000*3600) return {...await parseRates(), date: Date.now() }; // *3600*1000
+  else return lastLog._doc;
+
+}
 
 const saveStat = addStat => fs.exists('./stat.json', exists => {
   if ( exists ) fs.readFile('./stat.json', (err, data) => {  
@@ -76,6 +53,15 @@ const saveStat = addStat => fs.exists('./stat.json', exists => {
   })
 })
 
+const setMongoDate = dataLog => mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht').then(() => {
+  const { date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, } = dataLog;
+  const rate = new Rate({ date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, });
+  rate.save().then(
+    // rate => console.log('Document', rate),
+    err => console.error(err)
+  );
+});
+
 const parseRates = () => new Promise((resolve, reject) => {
   return request('https://pattaya-city.ru/banki/kurs', (err, response, html) => {
     if ( !err && response.statusCode === 200 ) {
@@ -83,7 +69,7 @@ const parseRates = () => new Promise((resolve, reject) => {
       return request('https://www.atb.su/services/exchange/', (err, response, html) => {
         if ( !err && response.statusCode === 200 ) {
           const { cny_rub, usd_rub } = atbSu(html);
-          saveStat( { [Date.now()]: { bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, }, } );
+          // saveStat( { [Date.now()]: { bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, }, } );
           setMongoDate( { date: Date.now(), bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, } );
           return resolve({bath_usd, bath_cny, bath_rub, cny_rub, usd_rub});
         }  
@@ -122,7 +108,7 @@ const moneyFormat = (num, curr=null) => {
 };
 
 const showResults = dataRates => {
-  const {bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, lastStat, rublesIsThere, } = dataRates;
+  const {bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, date, rublesIsThere, } = dataRates;
   const borderRun = dataRates.borderRun ? dataRates.borderRun : borderRunPrice;
   const condoRent = dataRates.condoRent ? dataRates.condoRent : condoMonthRent;
   const staying = dataRates.staying ? dataRates.staying : stayingMonth;
@@ -134,7 +120,7 @@ const showResults = dataRates => {
   const baths = val => moneyFormat(val, 'thb');
   const weekExpss = (val) => Math.floor((val + bathIsThere - condoRent * staying - borderRun * (staying / 1.5)) / (181 / 7) )
   return {
-    lastStat: new Date(+lastStat),
+    lastStat: new Date(+date),
     rublesIsThere: rublesIsThere,
     bathIsThere: bathIsThere,
     condoMonthRent: condoRent,
@@ -147,19 +133,35 @@ const showResults = dataRates => {
   }
 }
 
+// app.get('/', async (req, res) => {
+//   let result = await getStat();
+//   res.render('index', showResults({...result, rublesIsThere, }) );
+// })
+
+// app.post('/', async function(req, res) {
+//   let result = await getStat();
+//   res.render('index', showResults({...result, 
+//     rublesIsThere: +req.body.rubIsshetre,
+//     borderRun: +req.body.borderRunPrice,
+//     condoRent: +req.body.condoMonthRent,
+//     staying: +req.body.stayingMonth,
+//   }) );
+// });
+
 app.get('/', async (req, res) => {
-  let result = await getStat();
+  const result = await getMongo();
   res.render('index', showResults({...result, rublesIsThere, }) );
 })
 
 app.post('/', async function(req, res) {
-  let result = await getStat();
+  const result = await getMongo();
   res.render('index', showResults({...result, 
     rublesIsThere: +req.body.rubIsshetre,
     borderRun: +req.body.borderRunPrice,
     condoRent: +req.body.condoMonthRent,
     staying: +req.body.stayingMonth,
-  }) );
+    lastStat: result.date,
+  }));
 });
 
 app.listen(8888);
