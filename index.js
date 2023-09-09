@@ -1,9 +1,18 @@
-const fs = require('fs');
 const request = require('request');
 const cheerio = require('cheerio');
 const express = require('express');
 const consolidate = require('consolidate')
 const bodyParser = require('body-parser');
+
+const { bathIsThere, rublesIsThere, condoMonthRent, borderRunPrice, stayingMonth, parseHourPeriod } = require('./config.json');
+
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.engine('hbs', consolidate.handlebars);
+app.set('view engine', 'hbs');
+app.set('views', `${__dirname}/views`);
+
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const RatesSchema = new Schema({
@@ -16,24 +25,6 @@ const RatesSchema = new Schema({
 });
 const Rate =  mongoose.model('rate', RatesSchema);
 
-const {bathIsThere, rublesIsThere, condoMonthRent, borderRunPrice, stayingMonth, parseHourPeriod} = require('./config.json');
-
-const app = express();
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.engine('hbs', consolidate.handlebars);
-app.set('view engine', 'hbs');
-app.set('views', `${__dirname}/views`);
-
-const getStat = () => new Promise((resolve, reject) => fs.exists('./stat.json', exists => {
-  if ( exists ) fs.readFile('./stat.json', async (err, data) => {
-    const stat = JSON.parse(data);
-    const lastStat = Object.entries(stat)[Object.entries(stat).length-1];
-    if ( !lastStat || !lastStat[0] || Date.now() - +lastStat[0] > parseHourPeriod*3600*1000) return resolve( {...await parseRates(), date: Date.now() }); // *3600*1000
-    else return resolve( {...lastStat[1], date: lastStat[0]} );
-  })
-}));
-
 const getMongo = async() => {
   await mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht');
   const rate = await Rate.find({});
@@ -43,21 +34,11 @@ const getMongo = async() => {
 
 }
 
-const saveStat = addStat => fs.exists('./stat.json', exists => {
-  if ( exists ) fs.readFile('./stat.json', (err, data) => {  
-    const stat = JSON.parse(data);
-    const saveStat = {...stat, ...addStat};
-    fs.writeFile('./stat.json', JSON.stringify(saveStat), (err) => {
-     if ( err ) console.error(err);
-    })
-  })
-})
-
 const setMongoDate = dataLog => mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht').then(() => {
   const { date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, } = dataLog;
   const rate = new Rate({ date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, });
   rate.save().then(
-    // rate => console.log('Document', rate),
+    rate => console.log('Document', rate),
     err => console.error(err)
   );
 });
@@ -69,7 +50,6 @@ const parseRates = () => new Promise((resolve, reject) => {
       return request('https://www.atb.su/services/exchange/', (err, response, html) => {
         if ( !err && response.statusCode === 200 ) {
           const { cny_rub, usd_rub } = atbSu(html);
-          // saveStat( { [Date.now()]: { bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, }, } );
           setMongoDate( { date: Date.now(), bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, } );
           return resolve({bath_usd, bath_cny, bath_rub, cny_rub, usd_rub});
         }  
@@ -132,21 +112,6 @@ const showResults = dataRates => {
     weekExpss: `${ moneyFormat(Math.round((weekExpss(rubToBath) + weekExpss(cnyToBath) + weekExpss(usdToBath)) / 3), 'thb') }`,
   }
 }
-
-// app.get('/', async (req, res) => {
-//   let result = await getStat();
-//   res.render('index', showResults({...result, rublesIsThere, }) );
-// })
-
-// app.post('/', async function(req, res) {
-//   let result = await getStat();
-//   res.render('index', showResults({...result, 
-//     rublesIsThere: +req.body.rubIsshetre,
-//     borderRun: +req.body.borderRunPrice,
-//     condoRent: +req.body.condoMonthRent,
-//     staying: +req.body.stayingMonth,
-//   }) );
-// });
 
 app.get('/', async (req, res) => {
   const result = await getMongo();

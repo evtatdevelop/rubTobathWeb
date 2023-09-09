@@ -5,5 +5,5 @@
   "condoMonthRent": 8000,
   "borderRunPrice": 3000,
   "stayingMonth": 6,
-  "parseHourPeriod": 10
+  "parseHourPeriod": 2
 }
