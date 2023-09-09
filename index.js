@@ -25,14 +25,38 @@ const RatesSchema = new Schema({
 });
 const Rate =  mongoose.model('rate', RatesSchema);
 
+const getData = async() => {
+  const mododate = await getMongo();
+  const lastLog = mododate.lastLog;
+  if ( !lastLog || !lastLog.date || Date.now() - +lastLog.date > parseHourPeriod*1000*3600 ) return {...await parseRates(), date: Date.now() }; // *3600*1000
+  else return lastLog;
+}
+
 const getMongo = async() => {
   await mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht');
   const rate = await Rate.find({});
-  const lastLog = rate.reduce((last, log) => !Object.keys(last).length || last.date < log.date ? last = log : last = last , {});
-  if ( !lastLog || !lastLog.date || Date.now() - +lastLog.date > parseHourPeriod*1000*3600) return {...await parseRates(), date: Date.now() }; // *3600*1000
-  else return lastLog._doc;
-
+  const lastLog = rate.reduce((last, log) => 
+    !Object.keys(last).length || last.date < log.date 
+      ? last = log 
+      : last = last
+    , {}
+  );
+  const preLastLog = rate.reduce((last, log) => 
+    !Object.keys(last).length || (last.date < log.date && log.date !== lastLog.date) 
+      ? last = log 
+      : last = last
+    , {}
+  );
+  return {lastLog: lastLog._doc, preLastLog: preLastLog._doc}
 }
+
+// const getMongo = async() => {
+//   await mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht');
+//   const rate = await Rate.find({});
+//   const lastLog = rate.reduce((last, log) => !Object.keys(last).length || last.date < log.date ? last = log : last = last , {});
+//   if ( !lastLog || !lastLog.date || Date.now() - +lastLog.date > parseHourPeriod*1000*3600) return {...await parseRates(), date: Date.now() }; // *3600*1000
+//   else return lastLog._doc;
+// }
 
 const setMongoDate = dataLog => mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht').then(() => {
   const { date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, } = dataLog;
@@ -98,7 +122,8 @@ const showResults = dataRates => {
   const cnyToBath = bath_cny * yuan;
   const usdToBath = bath_usd * dollars;
   const baths = val => moneyFormat(val, 'thb');
-  const weekExpss = (val) => Math.floor((val + bathIsThere - condoRent * staying - borderRun * (staying / 1.5)) / (181 / 7) )
+  const weekExpss = (val) => Math.floor((val + bathIsThere - condoRent * staying - borderRun * (staying / 1)) / (181 / 7) )
+  const monthExpss = Math.round( (weekExpss(rubToBath) + weekExpss(cnyToBath) + weekExpss(usdToBath))/3/7*30 );
   return {
     lastStat: new Date(+date),
     rublesIsThere: rublesIsThere,
@@ -106,20 +131,23 @@ const showResults = dataRates => {
     condoMonthRent: condoRent,
     borderRunPrice: borderRun,
     stayingMonth: +staying,
+    rubRate: (1/bath_rub).toFixed(2),
+    usdRate: (usd_rub/bath_usd).toFixed(2),
+    cnyRate: (cny_rub/bath_cny).toFixed(2),
     rubRes: `${moneyFormat(rublesIsThere, 'rub')} - ${baths(rubToBath)} (${moneyFormat(weekExpss(rubToBath), 'thb')} a week)`,
     cnyRes: `${moneyFormat(yuan, 'cny')} - ${baths(cnyToBath)} (${moneyFormat(weekExpss(cnyToBath), 'thb')} a week)`,
     usdRes: `${moneyFormat(dollars, 'usd')} - ${baths(usdToBath)} (${moneyFormat(weekExpss(usdToBath), 'thb')} a week)`,
-    weekExpss: `${ moneyFormat(Math.round((weekExpss(rubToBath) + weekExpss(cnyToBath) + weekExpss(usdToBath)) / 3), 'thb') }`,
+    montsExpss: `${ moneyFormat(`${monthExpss}`, 'thb')} (${moneyFormat(`${monthExpss /bath_rub}`, 'rub')})`,
   }
 }
 
 app.get('/', async (req, res) => {
-  const result = await getMongo();
+  const result = await getData();
   res.render('index', showResults({...result, rublesIsThere, }) );
 })
 
 app.post('/', async function(req, res) {
-  const result = await getMongo();
+  const result = await getData();
   res.render('index', showResults({...result, 
     rublesIsThere: +req.body.rubIsshetre,
     borderRun: +req.body.borderRunPrice,
