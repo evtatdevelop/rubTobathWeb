@@ -4,7 +4,7 @@ const express = require('express');
 const consolidate = require('consolidate')
 const bodyParser = require('body-parser');
 
-const { bathIsThere, rublesIsThere, condoMonthRent, borderRunPrice, stayingMonth, parseHourPeriod } = require('./config.json');
+const { bathIsThere, rublesIsThere, condoMonthRent, borderRunPrice, visaPrice, stayingMonth, parseHourPeriod } = require('./config.json');
 
 const app = express();
 app.use(bodyParser.json());
@@ -28,8 +28,8 @@ const Rate =  mongoose.model('rate', RatesSchema);
 const getData = async() => {
   const mododate = await getMongo();
   const lastLog = mododate.lastLog;
-  if ( !lastLog || !lastLog.date || Date.now() - +lastLog.date > parseHourPeriod*1000*3600 ) return {...await parseRates(), date: Date.now() }; // *3600*1000
-  else return lastLog;
+  if ( !lastLog || !lastLog.date || Date.now() - +lastLog.date > parseHourPeriod*1000*3600 ) return {...await parseRates(), date: Date.now(), preLastLog: mododate.lastLog }; // *3600*1000
+  else return {...lastLog, preLastLog: mododate.preLastLog};
 }
 
 const getMongo = async() => {
@@ -49,14 +49,6 @@ const getMongo = async() => {
   );
   return {lastLog: lastLog._doc, preLastLog: preLastLog._doc}
 }
-
-// const getMongo = async() => {
-//   await mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht');
-//   const rate = await Rate.find({});
-//   const lastLog = rate.reduce((last, log) => !Object.keys(last).length || last.date < log.date ? last = log : last = last , {});
-//   if ( !lastLog || !lastLog.date || Date.now() - +lastLog.date > parseHourPeriod*1000*3600) return {...await parseRates(), date: Date.now() }; // *3600*1000
-//   else return lastLog._doc;
-// }
 
 const setMongoDate = dataLog => mongoose.connect('mongodb://127.0.0.1:27017/rubToBaht').then(() => {
   const { date, bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, } = dataLog;
@@ -112,8 +104,10 @@ const moneyFormat = (num, curr=null) => {
 };
 
 const showResults = dataRates => {
-  const {bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, date, rublesIsThere, } = dataRates;
-  const borderRun = dataRates.borderRun ? dataRates.borderRun : borderRunPrice;
+  const {bath_usd, bath_cny, bath_rub, cny_rub, usd_rub, date, rublesIsThere, preLastLog } = dataRates;
+  const borderRun = dataRates.borderRun  || dataRates.borderRun === 0 ? dataRates.borderRun : borderRunPrice;
+  const visa = dataRates.visa || dataRates.visa === 0 ? dataRates.visa : visaPrice;
+  const stayPrice = visa ? visa : borderRun * (stayingMonth / 1);
   const condoRent = dataRates.condoRent ? dataRates.condoRent : condoMonthRent;
   const staying = dataRates.staying ? dataRates.staying : stayingMonth;
   const yuan = rublesIsThere / cny_rub;
@@ -122,18 +116,32 @@ const showResults = dataRates => {
   const cnyToBath = bath_cny * yuan;
   const usdToBath = bath_usd * dollars;
   const baths = val => moneyFormat(val, 'thb');
-  const weekExpss = (val) => Math.floor((val + bathIsThere - condoRent * staying - borderRun * (staying / 1)) / (181 / 7) )
+  const weekExpss = val => Math.floor((val + bathIsThere - condoRent * staying - stayPrice) / (181 / 7) )
   const monthExpss = Math.round( (weekExpss(rubToBath) + weekExpss(cnyToBath) + weekExpss(usdToBath))/3/7*30 );
+  const rubRate = 1/bath_rub;
+  const usdRate = usd_rub/bath_usd;
+  const cnyRate = cny_rub/bath_cny;
+  const rubPreRate = 1/preLastLog.bath_rub;
+  const usdPreRate = preLastLog.usd_rub/preLastLog.bath_usd;
+  const cnyPreRate = preLastLog.cny_rub/preLastLog.bath_cny;
+  const setColorTrend = (pre, cur) => cur-pre < 0 ? 'green' : cur-pre > 0 ? 'red' : 'grey';
   return {
     lastStat: new Date(+date),
     rublesIsThere: rublesIsThere,
     bathIsThere: bathIsThere,
     condoMonthRent: condoRent,
     borderRunPrice: borderRun,
+    visaPrice: visa,
     stayingMonth: +staying,
-    rubRate: (1/bath_rub).toFixed(2),
-    usdRate: (usd_rub/bath_usd).toFixed(2),
-    cnyRate: (cny_rub/bath_cny).toFixed(2),
+    rubRate: rubRate.toFixed(2),
+    usdRate: usdRate.toFixed(2),
+    cnyRate: cnyRate.toFixed(2),
+    rubTrend: (rubRate - rubPreRate).toFixed(3),
+    usdTrend: (usdRate - usdPreRate).toFixed(3),
+    cnyTrend: (cnyRate - cnyPreRate).toFixed(3),
+    rubTrendColor: setColorTrend(rubPreRate, rubRate),
+    usdTrendColor: setColorTrend(usdPreRate, usdRate),
+    cnyTrendColor: setColorTrend(cnyPreRate, cnyRate),
     rubRes: `${moneyFormat(rublesIsThere, 'rub')} - ${baths(rubToBath)} (${moneyFormat(weekExpss(rubToBath), 'thb')} a week)`,
     cnyRes: `${moneyFormat(yuan, 'cny')} - ${baths(cnyToBath)} (${moneyFormat(weekExpss(cnyToBath), 'thb')} a week)`,
     usdRes: `${moneyFormat(dollars, 'usd')} - ${baths(usdToBath)} (${moneyFormat(weekExpss(usdToBath), 'thb')} a week)`,
@@ -151,6 +159,7 @@ app.post('/', async function(req, res) {
   res.render('index', showResults({...result, 
     rublesIsThere: +req.body.rubIsshetre,
     borderRun: +req.body.borderRunPrice,
+    visa: +req.body.visaPrice,
     condoRent: +req.body.condoMonthRent,
     staying: +req.body.stayingMonth,
     lastStat: result.date,

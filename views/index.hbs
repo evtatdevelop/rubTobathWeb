@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{title}}</title>
+  <style>
+    .form { display: flex; flex-direction: column; width: 350px; }
+    .form-item { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .item-label { display: block; width: 250px; }
+  </style>
 </head>
 <body>
   {{#if error}}
@@ -15,30 +20,30 @@
       <li>{{this.name}}: {{this.value}}</li>
     {{/each}}     --}}
   </ul>
-    <p>{{rubRes}}, Rate: {{rubRate}}</p>
-    <p>{{usdRes}}, Rate: {{usdRate}}</p>
-    <p>{{cnyRes}}, Rate: {{cnyRate}}</p>
+    <p>{{rubRes}}, Rate: {{rubRate}}, Trend: <span style="color: {{rubTrendColor}}">{{rubTrend}}</span></p>
+    <p>{{usdRes}}, Rate: {{usdRate}}, Trend: <span style="color: {{usdTrendColor}}">{{usdTrend}}</span></p>
+    <p>{{cnyRes}}, Rate: {{cnyRate}}, Trend: <span style="color: {{cnyTrendColor}}">{{cnyTrend}}</span></p>
     <p>Month expenses {{montsExpss}}</p>
 
-  <form action="/" method="post" style="display: flex; flex-direction: column; width: 350px">
-    {{!-- <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-      <label for="bathPerWeek" style="display: block; width: 250px;">Baht per month:</label>
-      <input id="bathPerWeek" name="bathPerWeek" value="{{thaiMonth}}"/>
-    </div> --}}
-    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-      <label for="rubIsshetre" style="display: block; width: 250px;">Rubles at the beginning :</label>
+  <form action="/" method="post" class="form">
+    <div class="form-item">
+      <label for="rubIsshetre" class="item-label">Rubles at the beginning :</label>
       <input id="rubIsshetre" name="rubIsshetre" value="{{rublesIsThere}}"/>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-      <label for="borderRunPrice" style="display: block; width: 250px;">Border run price:</label>
-      <input id="borderRunPrice" name="borderRunPrice" value="{{borderRunPrice}}"/>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-      <label for="condoMonthRent" style="display: block; width: 250px;">Condo month rent:</label>
+    <div class="form-item">
+      <label for="condoMonthRent" class="item-label">Condo month rent:</label>
       <input id="condoMonthRent" name="condoMonthRent" value="{{condoMonthRent}}"/>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-      <label for="stayingMonth" style="display: block; width: 250px;">Staying month:</label>
+    <div class="form-item">
+      <label for="borderRunPrice" class="item-label">Border run price:</label>
+      <input id="borderRunPrice" name="borderRunPrice" value="{{borderRunPrice}}"/>
+    </div>
+    <div class="form-item">
+      <label for="visaPrice" class="item-label">Visa price:</label>
+      <input id="visaPrice" name="visaPrice" value="{{visaPrice}}"/>
+    </div>
+    <div class="form-item">
+      <label for="stayingMonth" class="item-label">Staying month:</label>
       <input id="stayingMonth" name="stayingMonth" value="{{stayingMonth}}"/>
     </div>
     <button type="submit">Ok</button>

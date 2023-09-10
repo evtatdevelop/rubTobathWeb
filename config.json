@@ -4,6 +4,7 @@
   "rublesIsThere":300000,
   "condoMonthRent": 8000,
   "borderRunPrice": 3000,
+  "visaPrice": 28000,
   "stayingMonth": 6,
   "parseHourPeriod": 2
 }
