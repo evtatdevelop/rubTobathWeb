@@ -76,18 +76,21 @@ const parseRates = () => new Promise((resolve, reject) => {
 
 const pattayaCityRu = html => {
   const $ = cheerio.load(html);
-  const bath_usd = parseFloat($('#toc-2').parent('h2').next('p').next('div').find('.widget')
-    .find('.currencyconverter-minimalistic-container')
-    .find('.currencyconverter-minimalistic-single-currency')
-    .find('.currencyconverter-minimalistic-row')
-    .find('.currencyconverter-minimalistic-currency-price').text().replace(',', '.'));
+  const bath_usd =  parseFloat($('.otw-sidebar-3')
+  .find('.widget')
+  .find('.currencyconverter-minimalistic-container')
+  .find('.currencyconverter-minimalistic-single-currency')
+  .find('.currencyconverter-minimalistic-row')
+  .find('.currencyconverter-minimalistic-currency-price').text().replace(',', '.'));
+  const bath_rub =  parseFloat($('.otw-sidebar-2')
+  .find('.widget')
+  .find('.currencyconverter-minimalistic-container')
+  .find('.currencyconverter-minimalistic-single-currency')
+  .find('.currencyconverter-minimalistic-row')
+  .find('.currencyconverter-minimalistic-currency-price').text().replace(',', '.'));
   const bath_cny = parseFloat($('.widget_currencyconverter_table').eq(0).find('table')
-    .find('tbody').find('tr').eq(5).find('td').eq(1).find('span').text().replace(',', '.'));
-  const bath_rub = parseFloat($('#toc').parent('h2').next('p').next('div').find('.widget')
-    .find('.currencyconverter-minimalistic-container')
-    .find('.currencyconverter-minimalistic-single-currency')
-    .find('.currencyconverter-minimalistic-row')
-    .find('.currencyconverter-minimalistic-currency-price').text().replace(',', '.'));
+  .find('tbody').find('tr').eq(5).find('td').eq(1).find('span').text().replace(',', '.'));
+  // console.log(bath_usd, bath_cny, bath_rub)
   return {bath_usd, bath_cny, bath_rub}
 }
 
@@ -95,6 +98,7 @@ const atbSu = html => {
   const $ = cheerio.load(html);          
   cny_rub = parseFloat($('#currencyTab1').find('.currency-table').find('.currency-table__tr').eq(1).find('.currency-table__td').eq(2).text());
   usd_rub = parseFloat($('#currencyTab1').find('.currency-table').find('.currency-table__tr').eq(2).find('.currency-table__td').eq(2).text());
+  // console.log(cny_rub, usd_rub);
   return {cny_rub, usd_rub}
 }
 
